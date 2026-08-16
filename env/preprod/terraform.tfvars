@@ -4,7 +4,7 @@ rg={rg1 = {
         }
 
         rg2 = {
-            name     = "example-rg-2"
+            name     = "example-rg-4"
             location = "West Europe"
         }
 }

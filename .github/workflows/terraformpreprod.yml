@@ -54,6 +54,9 @@ jobs:
            client-id: "58df072e-3764-4c50-a2f4-2b499e58573f"
            tenant-id: "ff7b0485-25c7-4264-b00f-fd1c4c1f0f08"
            subscription-id: "784dcbe8-46d9-4a47-be0e-70450bcf37c4"
+           
+      - name: Verify Azure Login
+        run: az account show
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive

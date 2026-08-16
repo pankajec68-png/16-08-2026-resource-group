@@ -1,0 +1,55 @@
+name: Terraform PreProd
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "env/preprod/**"
+      - "childmodule/**"
+      - ".github/workflows/terraformpreprod.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "env/preprod/**"
+      - "childmodule/**"
+      - ".github/workflows/terraformpreprod.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform PreProd
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: env/preprod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve tfplan

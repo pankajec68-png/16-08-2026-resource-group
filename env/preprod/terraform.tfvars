@@ -8,7 +8,7 @@ rg={rg1 = {
             location = "West Europe"
         }
         rg3 = {
-            name     = "example-rg-51"
+            name     = "example-rg-30"
             location = "West Europe"
         }
 }

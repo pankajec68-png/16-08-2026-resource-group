@@ -1,45 +1,68 @@
-name: Terraform PreProd
+name: Terraform Preprod CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main
-    paths:
-      - "env/preprod/**"
-      - "childmodule/**"
-      - ".github/workflows/terraformpreprod.yml"
-
+      - "**"
   pull_request:
     branches:
       - main
-    paths:
-      - "env/preprod/**"
-      - "childmodule/**"
-      - ".github/workflows/terraformpreprod.yml"
 
 permissions:
   contents: read
+  pull-requests: write
+  id-token: write
+
+env:
+  TF_VERSION: "1.9.8"
+  TF_WORKING_DIR: "./env/preprod"
 
 jobs:
-  terraform:
-    name: Terraform PreProd
+
+  # --------------------------------------------------
+  # TERRAFORM PLAN
+  # Runs on feature branches and Pull Requests
+  # --------------------------------------------------
+  terraform-plan:
+    name: Terraform Plan
     runs-on: ubuntu-latest
+
+    # Do not run plan on main push.
+    # Main will execute apply job instead.
+    if: github.ref != 'refs/heads/main'
 
     defaults:
       run:
-        working-directory: env/preprod
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
     steps:
-      - name: Checkout
+
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.9.8
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # --------------------------------------------------
+      # AZURE LOGIN
+      # --------------------------------------------------
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+           client-id: "58df072e-3764-4c50-a2f4-2b499e58573f"
+           tenant-id: "ff7b0485-25c7-4264-b00f-fd1c4c1f0f08"
+           subscription-id: "784dcbe8-46d9-4a47-be0e-70450bcf37c4"
+
+      
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
+
+      - name: Verify Azure Login
+        run: az account show
 
       - name: Terraform Init
         run: terraform init
@@ -50,6 +73,53 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          retention-days: 1
+
+
+  # --------------------------------------------------
+  # TERRAFORM APPLY
+  # Runs ONLY after merge/push to main
+  # --------------------------------------------------
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    if: github.ref == 'refs/heads/main'
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # --------------------------------------------------
+      # AZURE LOGIN
+      # --------------------------------------------------
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: "58df072e-3764-4c50-a2f4-2b499e58573f"
+          tenant-id: "ff7b0485-25c7-4264-b00f-fd1c4c1f0f08"
+          subscription-id: "784dcbe8-46d9-4a47-be0e-70450bcf37c4"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
       - name: Terraform Apply
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve

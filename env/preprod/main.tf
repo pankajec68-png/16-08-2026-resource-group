@@ -1,6 +1,6 @@
-module"res" {
-    source = "../../childmodule/resourcegroup"
-    resource = var.rg
-        
-    
+module "res" {
+  source   = "../../childmodule/resourcegroup"
+  resource = var.rg
+
+
 }
